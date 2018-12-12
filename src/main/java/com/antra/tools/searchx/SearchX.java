@@ -16,11 +16,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class SearchX {
+    public static final int CHUNK_NUM = 4;
 
     public static Map<String, List<String>> doTheSearch(String folderName, String keyword, boolean caseSensitive) throws IOException {
 
         List<File>[] files = SearchXFileHelper.getFilesInFolder(folderName);
-        ExecutorService es = Executors.newFixedThreadPool(4);
+        ExecutorService es = Executors.newFixedThreadPool(CHUNK_NUM);
         List<Future<Map<String, List<String>>>> futures = new ArrayList<>();
         for (List<File> fl : files) {
             Future<Map<String, List<String>>> future = es.submit(() -> {

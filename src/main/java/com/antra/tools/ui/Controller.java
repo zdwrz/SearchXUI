@@ -101,9 +101,9 @@ public class Controller {
             task.setOnSucceeded((event)->{
                 progressInd.setVisible(false);
                 goBtn.setDisable(false);
-                btmStatus.setText("Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
                 dataPane.getPanes().clear();
                 Map<String,List<String>> data = (HashMap)event.getSource().getValue();
+                btmStatus.setText("Result: " + data.size()+ "    Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
                 data.entrySet().stream().forEach(entry -> {
                     TitledPane tp = new TitledPane(entry.getKey(),new Label("A"));
                     final HBox hBox = new HBox();
