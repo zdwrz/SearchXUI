@@ -61,7 +61,7 @@
       </GridPane>
        <ScrollPane GridPane.rowIndex="1">
 
-          <Accordion fx:id="dataPane">
+          <Accordion fx:id="dataPane" minWidth="650.0" prefWidth="775.0" GridPane.hgrow="ALWAYS">
 
           </Accordion>
        </ScrollPane>

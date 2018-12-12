@@ -10,8 +10,16 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        Parent root = FXMLLoader.load(getClass().getResource("/main.fxml"));
-        primaryStage.setTitle("Search From Files");
+        String version = getParameters().getNamed().get("version");
+        Parent root = null;
+        if (version == null || version.equals("new")) {
+            root = FXMLLoader.load(getClass().getResource("/mainRT.fxml"));
+            primaryStage.setTitle("Search From Files - RT");
+        }else if ("old".equals(version)){
+            root = FXMLLoader.load(getClass().getResource("/main.fxml"));
+            primaryStage.setTitle("Search From Files");
+        }
+
         primaryStage.setScene(new Scene(root, 800, 600));
         primaryStage.show();
     }

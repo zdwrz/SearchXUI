@@ -27,6 +27,7 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class Controller {
@@ -80,6 +81,9 @@ public class Controller {
         private String fi;
         private String kwi;
         private boolean cs;
+        private int totalFileNo;
+        private AtomicInteger fileProcessed = new AtomicInteger(0);
+
         public SearchXService(String folderInput, String keywordInput, boolean selected) {
             this.fi = folderInput;
             this.kwi = keywordInput;
@@ -95,7 +99,9 @@ public class Controller {
                 protected Integer call() throws Exception {
                     int total = 0;
                     List<File>[] files = SearchXFileHelper.getFilesInFolder(fi);
-
+                    for (List<File> fl : files) {
+                        totalFileNo += fl.size();
+                    }
                     for (List<File> fileList : files) {
                         total += findFiles(kwi, fileList, cs?CaseSensitive.YES:CaseSensitive.NO);
                     }
@@ -108,7 +114,7 @@ public class Controller {
                 dataPane.getPanes().clear();
             });
             task.setOnSucceeded((event)->{
-                progressInd.setVisible(false);
+              //  progressInd.setVisible(false);
                 goBtn.setDisable(false);
                 btmStatus.setText("Result: " + event.getSource().getValue() + "    Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
             });
@@ -123,12 +129,13 @@ public class Controller {
             if(cs == CaseSensitive.NO){
                 searchTerm = searchTerm.toLowerCase();
             }
-            for(File f : filesToSearch) {
-
+            for(int i = 0; i < filesToSearch.size(); i++){
+                File f = filesToSearch.get(i);
+                fileProcessed.incrementAndGet();
                 if(!tika.detect(f.getAbsolutePath()).contains("office") && !tika.detect(f.getAbsolutePath()).contains("text/plain")){
                     continue;
                 }
-                System.out.println(Thread.currentThread() + " : "+"Working on " + f.getAbsolutePath());
+//                System.out.println(Thread.currentThread() + " : "+"Working on " + f.getAbsolutePath());
                 BufferedReader reader = null;
                 List<String> matchLines = new ArrayList<>();
                 try {
@@ -147,11 +154,14 @@ public class Controller {
                             matchLines.add(originStr.trim().replaceAll(" +", " ").replaceAll("\t+", " "));
                         }
                     }
+                    SearchResultPojo onePiece = null;
                     if (matchLines.size() > 0) {
-                        SearchResultPojo onePiece = new SearchResultPojo(f.getAbsolutePath(), matchLines);
-                        updateUI(onePiece);
+                        onePiece = new SearchResultPojo(f.getAbsolutePath(), matchLines);
                         total++;
                     }
+
+                    updateUI(onePiece, fileProcessed.get(), totalFileNo);
+
                     reader.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -161,12 +171,15 @@ public class Controller {
         }
     }
 
-    private void updateUI(SearchResultPojo onePiece) {
+    private void updateUI(SearchResultPojo onePiece, int current, int total) {
         Platform.runLater(()->{
+            progressInd.setProgress((double)current/total);
+            if(onePiece == null) return;
             TitledPane tp = new TitledPane(onePiece.getFileName(),new Label("A"));
             final HBox hBox = new HBox();
             hBox.setSpacing(5);
             TextArea text = new TextArea(onePiece.getMatchingLines().stream().collect(Collectors.joining("\n")));
+            text.setPrefSize(700, 200);
             Button openBtn = new Button("Open");
             openBtn.setOnMouseClicked(e->{
                 System.out.println("try to open " +onePiece.getFileName());
