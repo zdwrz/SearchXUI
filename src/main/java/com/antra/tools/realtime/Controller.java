@@ -51,10 +51,12 @@ public class Controller {
             directoryChooser.setTitle("Open target folder");
             directoryChooser.setInitialDirectory(new File(System.getProperty("user.home")));
             File selectedDirectory = directoryChooser.showDialog(folderBrowseBtn.getScene().getWindow());
-            folderInput.setText(selectedDirectory.getAbsolutePath());
+            if(selectedDirectory != null) {
+                folderInput.setText(selectedDirectory.getAbsolutePath().trim());
+            }
         });
         goBtn.setOnMouseClicked(event -> {
-            if(checkFolder(folderInput.getText()) && checkKeyword(keywordInput.getText())){
+            if(checkFolder(folderInput.getText().trim()) && checkKeyword(keywordInput.getText())){
                 try {
                     progressInd.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
                     progressInd.setVisible(true);
@@ -62,7 +64,7 @@ public class Controller {
                     timestamp = System.nanoTime();
                     btmStatus.setText("");
                     dataPane.getPanes().clear();
-                    doTheSearch(folderInput.getText(),keywordInput.getText(), csChkBox.isSelected());
+                    doTheSearch(folderInput.getText().trim(),keywordInput.getText(), csChkBox.isSelected());
                 } catch (IOException e) {
                     e.printStackTrace();
                     alarmError(e.getLocalizedMessage());
@@ -77,7 +79,7 @@ public class Controller {
         service.start();
     }
 
-    private class SearchXService extends Service<Integer> {
+    private class SearchXService extends Service<Void> {
         private String fi;
         private String kwi;
         private boolean cs;
@@ -91,21 +93,20 @@ public class Controller {
         }
 
         @Override
-        protected Task<Integer> createTask() {
+        protected Task<Void> createTask() {
 
-            Task<Integer> task =  new Task<Integer>() {
+            Task<Void> task =  new Task<Void>() {
 
                 @Override
-                protected Integer call() throws Exception {
-                    int total = 0;
+                protected Void call() throws Exception {
                     List<File>[] files = SearchXFileHelper.getFilesInFolder(fi);
                     for (List<File> fl : files) {
                         totalFileNo += fl.size();
                     }
                     for (List<File> fileList : files) {
-                        total += findFiles(kwi, fileList, cs?CaseSensitive.YES:CaseSensitive.NO);
+                        findFiles(kwi, fileList, cs?CaseSensitive.YES:CaseSensitive.NO);
                     }
-                    return total;
+                    return null;
                 }
             };
             task.setOnFailed(e->{
@@ -116,7 +117,7 @@ public class Controller {
             task.setOnSucceeded((event)->{
               //  progressInd.setVisible(false);
                 goBtn.setDisable(false);
-                btmStatus.setText("Result: " + event.getSource().getValue() + "    Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
+                btmStatus.setText("Result: " + fileProcessed + "    Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
             });
 
             return task;
@@ -133,6 +134,7 @@ public class Controller {
                 File f = filesToSearch.get(i);
                 fileProcessed.incrementAndGet();
                 if(!tika.detect(f.getAbsolutePath()).contains("office") && !tika.detect(f.getAbsolutePath()).contains("text/plain")){
+                    updateUI(null, fileProcessed.get(), totalFileNo);
                     continue;
                 }
 //                System.out.println(Thread.currentThread() + " : "+"Working on " + f.getAbsolutePath());
@@ -179,7 +181,7 @@ public class Controller {
             final HBox hBox = new HBox();
             hBox.setSpacing(5);
             TextArea text = new TextArea(onePiece.getMatchingLines().stream().collect(Collectors.joining("\n")));
-            text.setPrefSize(700, 200);
+            text.setPrefSize(670, 200);
             Button openBtn = new Button("Open");
             openBtn.setOnMouseClicked(e->{
                 System.out.println("try to open " +onePiece.getFileName());
