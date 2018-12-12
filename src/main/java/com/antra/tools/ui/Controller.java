@@ -22,9 +22,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Controller {
@@ -37,6 +39,10 @@ public class Controller {
     @FXML Button goBtn;
     @FXML CheckBox csChkBox;
     @FXML ProgressIndicator progressInd;
+    @FXML Label btmStatus;
+    long timestamp = 0l;
+
+
     @FXML
     protected void initialize(){
         folderBrowseBtn.setOnMouseClicked(e->{
@@ -51,9 +57,13 @@ public class Controller {
                 try {
                     progressInd.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
                     progressInd.setVisible(true);
+                    goBtn.setDisable(true);
+                    timestamp = System.nanoTime();
+                    btmStatus.setText("");
                     doTheSearch(folderInput.getText(),keywordInput.getText(), csChkBox.isSelected());
                 } catch (IOException e) {
                     e.printStackTrace();
+                    alarmError(e.getLocalizedMessage());
                 }
             }
         });
@@ -83,9 +93,15 @@ public class Controller {
                     return SearchX.doTheSearch(fi,kwi,cs);
                 }
             };
-
+            task.setOnFailed(e->{
+                progressInd.setVisible(false);
+                goBtn.setDisable(false);
+                dataPane.getPanes().clear();
+            });
             task.setOnSucceeded((event)->{
                 progressInd.setVisible(false);
+                goBtn.setDisable(false);
+                btmStatus.setText("Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
                 dataPane.getPanes().clear();
                 Map<String,List<String>> data = (HashMap)event.getSource().getValue();
                 data.entrySet().stream().forEach(entry -> {
@@ -102,6 +118,7 @@ public class Controller {
                                 try {
                                     Desktop.getDesktop().open( new File( entry.getKey() ) );
                                 } catch (IOException e1) {
+                                    alarmError("Cannot Open File " + entry.getKey());
                                     e1.printStackTrace();
                                 }
                             }).start();
@@ -140,6 +157,11 @@ public class Controller {
     }
 
     private void alarmError(String msg) {
-        System.out.println(msg);
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error Info");
+        alert.setHeaderText(null);
+        alert.setContentText(msg);
+        alert.showAndWait();
     }
+
 }
