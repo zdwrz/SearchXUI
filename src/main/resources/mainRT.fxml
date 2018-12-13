@@ -13,6 +13,9 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.RowConstraints?>
 
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuItem?>
 <GridPane alignment="center" gridLinesVisible="false" hgap="1.0" prefHeight="600.0" prefWidth="800.0" vgap="1.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.antra.tools.realtime.Controller">
    <rowConstraints>
       <RowConstraints maxHeight="295.0" minHeight="125.0" prefHeight="136.0" vgrow="NEVER" />
@@ -68,5 +71,14 @@
        <HBox GridPane.rowIndex="2">
            <Label fx:id="btmStatus"><padding><Insets left="10.0" /></padding></Label>
        </HBox>
+       <MenuBar useSystemMenuBar="true">
+           <menus>
+               <Menu mnemonicParsing="false" text="Help">
+                   <items>
+                       <MenuItem mnemonicParsing="false" text="About" fx:id="aboutMenu"/>
+                   </items>
+               </Menu>
+           </menus>
+       </MenuBar>
    </children>
 </GridPane>

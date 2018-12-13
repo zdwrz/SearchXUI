@@ -6,6 +6,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.FlowPane;
@@ -40,6 +41,7 @@ public class Controller {
     @FXML CheckBox csChkBox;
     @FXML ProgressIndicator progressInd;
     @FXML Label btmStatus;
+    @FXML MenuItem aboutMenu;
     long timestamp = 0l;
 
 
@@ -67,6 +69,13 @@ public class Controller {
                 }
             }
         });
+        aboutMenu.setOnAction((event -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("About");
+            alert.setHeaderText("The search will open each file under the specified folder \nand search line by line with exact match of the keyword. \nMaybe running slow if the files are too many.");
+            alert.setContentText("Created by Dawei Z.(zdwrzz4@gmail.com)\nSearched by Apache Tika ");
+            alert.showAndWait();
+        }));
     }
 
 
