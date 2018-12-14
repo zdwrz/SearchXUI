@@ -6,10 +6,7 @@ import org.apache.tika.detect.DefaultDetector;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,7 +17,7 @@ public class SearchX {
 
     public static Map<String, List<String>> doTheSearch(String folderName, String keyword, boolean caseSensitive) throws IOException {
 
-        List<File>[] files = SearchXFileHelper.getFilesInFolder(folderName);
+        List<File>[] files = SearchXFileHelper.getFilesInFolder(folderName, Arrays.asList("Office","PDF","Text"));
         ExecutorService es = Executors.newFixedThreadPool(CHUNK_NUM);
         List<Future<Map<String, List<String>>>> futures = new ArrayList<>();
         for (List<File> fl : files) {
@@ -52,7 +49,7 @@ public class SearchX {
         }
         for(File f : filesToSearch) {
 
-            if(!tika.detect(f.getAbsolutePath()).contains("office") && !tika.detect(f.getAbsolutePath()).contains("text/plain")){
+            if(!tika.detect(f.getAbsolutePath()).contains("office") && !tika.detect(f.getAbsolutePath()).contains("text")){
                 continue;
             }
             System.out.println(Thread.currentThread() + " : "+"Working on " + f.getAbsolutePath());

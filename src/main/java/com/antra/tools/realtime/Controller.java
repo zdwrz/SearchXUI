@@ -5,13 +5,16 @@ import com.antra.tools.searchx.SearchXFileHelper;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.DirectoryChooser;
@@ -39,16 +42,32 @@ public class Controller {
     @FXML TextField keywordInput;
     @FXML Button folderBrowseBtn;
     @FXML Button goBtn;
+    @FXML Button cancelBtn;
     @FXML CheckBox csChkBox;
     @FXML ProgressIndicator progressInd;
     @FXML Label btmStatus;
     @FXML MenuItem aboutMenu;
-
     long timestamp = 0l;
-
-
+    FlowPane typePane;
+    final List<String> selectedType = new ArrayList<>();
+    SearchXService service;
     @FXML
     protected void initialize(){
+
+
+        typePane = new FlowPane();
+        typePane.alignmentProperty().setValue(Pos.CENTER_LEFT);
+        searchArea.add(typePane,2,2,1,1);
+        for (String str : SearchXFileHelper.supportedTypes.keySet()) {
+            CheckBox c = new CheckBox(str);
+            c.setStyle("-fx-padding: 10");
+            c.setSelected(true);
+            typePane.getChildren().add(c);
+        }
+
+        if (new File(System.getProperty("user.home") + "/documents/resumes").exists()) {
+            folderInput.setText(System.getProperty("user.home")+File.separator + "documents" +File.separator+"resumes");
+        }
         folderBrowseBtn.setOnMouseClicked(e->{
             DirectoryChooser directoryChooser = new DirectoryChooser();
             directoryChooser.setTitle("Open target folder");
@@ -58,9 +77,11 @@ public class Controller {
                 folderInput.setText(selectedDirectory.getAbsolutePath().trim());
             }
         });
+
         goBtn.setOnMouseClicked(event -> {
-            if(checkFolder(folderInput.getText().trim()) && checkKeyword(keywordInput.getText())){
+            if(checkFolder(folderInput.getText().trim()) && checkKeyword(keywordInput.getText()) && setAndCheckType()){
                 try {
+                    cancelBtn.setVisible(true);
                     progressInd.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
                     progressInd.setVisible(true);
                     goBtn.setDisable(true);
@@ -74,6 +95,8 @@ public class Controller {
                 }
             }
         });
+
+        cancelBtn.setOnMouseClicked(event -> {if(service != null || service.isRunning()) service.cancel();});
         aboutMenu.setOnAction((event -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("About");
@@ -81,11 +104,11 @@ public class Controller {
             alert.setContentText("Created by Dawei Z.(zdwrzz4@gmail.com)\nSearched by Apache Tika ");
             alert.showAndWait();
         }));
+
     }
 
-
     private void doTheSearch(String folderInput, String keywordInput, boolean selected) throws IOException {
-        SearchXService service = new SearchXService(folderInput, keywordInput, selected);
+        service = new SearchXService(folderInput, keywordInput, selected);
         service.start();
     }
 
@@ -96,6 +119,16 @@ public class Controller {
         private int totalFileNo;
         private AtomicInteger fileProcessed = new AtomicInteger(0);
         private int resultNo;
+        private Task task;
+
+        @Override
+        public boolean cancel() {
+            if (task != null) {
+                return task.cancel(false);
+            } else {
+                return false;
+            }
+        }
 
         public SearchXService(String folderInput, String keywordInput, boolean selected) {
             this.fi = folderInput;
@@ -106,29 +139,38 @@ public class Controller {
         @Override
         protected Task<Void> createTask() {
 
-            Task<Void> task =  new Task<Void>() {
+            task =  new Task<Void>() {
 
                 @Override
                 protected Void call() throws Exception {
-                    List<File>[] files = SearchXFileHelper.getFilesInFolder(fi);
+                    List<File>[] files = SearchXFileHelper.getFilesInFolder(fi, selectedType);
+                    List<File> flatFiles = new ArrayList<>();
                     for (List<File> fl : files) {
+                        flatFiles.addAll(fl);
                         totalFileNo += fl.size();
                     }
-                    for (List<File> fileList : files) {
-                        resultNo += findFiles(kwi, fileList, cs?CaseSensitive.YES:CaseSensitive.NO);
-                    }
+                    findFiles(kwi, flatFiles, cs?CaseSensitive.YES:CaseSensitive.NO);
                     return null;
                 }
             };
-            task.setOnFailed(e->{
+
+            EventHandler eventHandlerCancel = e->{
                 progressInd.setVisible(false);
                 goBtn.setDisable(false);
-                dataPane.getPanes().clear();
-            });
+//                dataPane.getPanes().clear();
+                cancelBtn.setVisible(false);
+                btmStatus.setText("Result: " + resultNo + "/" + fileProcessed + "    Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
+            };
+
+            task.setOnCancelled(eventHandlerCancel);
+            task.setOnFailed(eventHandlerCancel);
             task.setOnSucceeded((event)->{
-              //  progressInd.setVisible(false);
+                if (totalFileNo == 0) {
+                      progressInd.setVisible(false);
+                }
                 goBtn.setDisable(false);
                 btmStatus.setText("Result: " + resultNo + "/" + fileProcessed + "    Keyword is \""+kwi + "\"    Time Elapsed: " + new DecimalFormat("0.00").format((TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - timestamp)) / 1000.0) + " seconds.");
+                cancelBtn.setVisible(false);
             });
 
             return task;
@@ -144,20 +186,19 @@ public class Controller {
             for(int i = 0; i < filesToSearch.size(); i++){
                 File f = filesToSearch.get(i);
                 fileProcessed.incrementAndGet();
-                if(!tika.detect(f.getAbsolutePath()).contains("office") && !tika.detect(f.getAbsolutePath()).contains("text/plain")){
-                    updateUI(null, fileProcessed.get(), totalFileNo);
-                    continue;
-                }
+//                if(selectedType.stream().map(supportedTypes::get).allMatch(type->!tika.detect(f.getAbsolutePath()).contains(type))){
+//                    updateUI(null, fileProcessed.get(), totalFileNo);
+//                    continue;
+//                }
 //                System.out.println(Thread.currentThread() + " : "+"Working on " + f.getAbsolutePath());
-                BufferedReader reader = null;
+//                BufferedReader reader = null;
                 List<String> matchLines = new ArrayList<>();
-                try {
-                    reader = new BufferedReader(tika.parse(f));
+                try (BufferedReader reader = new BufferedReader(tika.parse(f))){
 
                     String tempStr = null;
                     String originStr = null;
 
-                    while ((originStr = reader.readLine()) != null) {
+                    while ((originStr = reader.readLine()) != null && !task.isCancelled()) {
                         if(cs == CaseSensitive.NO){
                             tempStr = originStr.toLowerCase();
                         }else{
@@ -171,11 +212,11 @@ public class Controller {
                     if (matchLines.size() > 0) {
                         onePiece = new SearchResultPojo(f.getAbsolutePath(), matchLines);
                         total++;
+                        resultNo++;
                     }
-
-                    updateUI(onePiece, fileProcessed.get(), totalFileNo);
-
-                    reader.close();
+                    if(!task.isCancelled()) {
+                        updateUI(onePiece, fileProcessed.get(), totalFileNo);
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -221,6 +262,19 @@ public class Controller {
         }
         else {
             alarmError("Invalid Keyword");
+            return false;
+        }
+    }
+
+    private boolean setAndCheckType() {
+        selectedType.clear();
+        typePane.getChildren().stream().filter(n -> n instanceof CheckBox).map(n->(CheckBox)n).filter(checkBox -> checkBox.isSelected()).forEach(cb->{
+            selectedType.add(cb.getText());
+        });
+        if(selectedType.size() > 0){
+            return true;
+        }else{
+            alarmError("No File Type is selected");
             return false;
         }
     }

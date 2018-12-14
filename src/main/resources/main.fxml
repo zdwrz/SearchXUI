@@ -59,8 +59,8 @@
                <GridPane.margin>
                   <Insets left="10.0" />
                </GridPane.margin></Button>
-            <CheckBox fx:id="csChkBox" mnemonicParsing="false" text="Case Sensitive" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-            <ProgressIndicator fx:id="progressInd" progress="0.0" visible="false" GridPane.columnIndex="3" GridPane.rowIndex="1" GridPane.rowSpan="2" />
+            <CheckBox fx:id="csChkBox" mnemonicParsing="false" text="Case Sensitive" GridPane.rowIndex="2" />
+            <ProgressIndicator fx:id="progressInd" progress="0.0" visible="true" GridPane.columnIndex="3" GridPane.rowIndex="1" GridPane.rowSpan="2" />
          </children>
       </GridPane>
        <ScrollPane GridPane.rowIndex="2">
@@ -76,7 +76,7 @@
         <menus>
           <Menu mnemonicParsing="false" text="Help">
             <items>
-              <MenuItem mnemonicParsing="false" text="About" fx:id="aboutMenu"/>
+              <MenuItem fx:id="aboutMenu" mnemonicParsing="false" text="About" />
             </items>
           </Menu>
         </menus>
